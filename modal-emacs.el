@@ -2,9 +2,8 @@
 (defun modal-emacs-off () (interactive) (modal-emacs-mode -1))
 
 (defvar modal--normal-mode-map "The standard keymap that starts everything")
+
 (setq modal--normal-mode-map (make-sparse-keymap))
-
-
 
 (define-key modal--normal-mode-map "a" 'move-beginning-of-line)
 (define-key modal--normal-mode-map "e" 'move-end-of-line)
@@ -38,17 +37,15 @@
   (interactive)
   (setq insert-mode t)
   (modal--switch-active-keymap 'insert-mode modal--insert-mode-map)
+  (modal-emacs-update-mode-line "I")
   nil)
-
 
 (defun modal--normal-mode ()
   ""
   (interactive)
   (setq normal-mode t)
-  (modal--switch-active-keymap 'normal-mode modal--normal-mode-map))
-
-
-(defun modal--meta-mode())
+  (modal--switch-active-keymap 'normal-mode modal--normal-mode-map)
+  (modal-emacs-update-mode-line "N"))
 
 
 (defvar modal--active-keymap-alist nil
@@ -70,6 +67,17 @@
 
 (define-globalized-minor-mode modal-emacs-globalized-mode modal-emacs-mode
   modal-emacs-on)
+
+(defun modal-emacs-update-mode-line (mode-indicator)
+  ;; sets the structure directly
+  ;; kinda sad
+  (setcdr (assq 'modal-emacs-mode
+                minor-mode-alist)
+          (list (format " Modal[%s]" mode-indicator)))
+  (force-mode-line-update))
+
+
+
 
 
 (provide 'modal-emacs)
