@@ -1,15 +1,24 @@
 ;; released into the public domain.
 ;; TODO add gpl header
 
+
+(defvar modal--original-cursor-color nil
+  "The cursor color we had originally. Used to restore when the cursor color has changed")
+
+
 (defun modal-emacs-on () (interactive) (modal-emacs-mode 1))
 (defun modal-emacs-off () (interactive) (modal-emacs-mode -1))
 
 
-(defvar modal--insert-mode-map "Map for typing characters.")
+(defvar modal--insert-mode-map nil "Map for typing characters.")
 (setq modal--insert-mode-map (make-sparse-keymap))
 (define-key modal--insert-mode-map (kbd "M-ESC") 'modal--normal-mode)
+(define-key modal--insert-mode-map "o" 'modal--other-window-or-self-insert)
+(defvar modal--insert-mode-enabled nil)
 
-(defvar modal--normal-mode-map "The standard keymap for commanding Emacs.")
+
+
+(defvar modal--normal-mode-map nil "The standard keymap for commanding Emacs.")
 (setq modal--normal-mode-map (make-sparse-keymap))
 (define-key modal--normal-mode-map "a" 'move-beginning-of-line)
 (define-key modal--normal-mode-map "e" 'move-end-of-line)
@@ -20,9 +29,9 @@
 (define-key modal--normal-mode-map "b" 'backward-char)
 (define-key modal--normal-mode-map "d" 'delete-char)
 (define-key modal--normal-mode-map " " 'set-mark-command)
-(define-key modal--normal-mode-map "o" 'other-window)
-(define-key modal--normal-mode-map "/" 'isearch-forward-regexp)
-(define-key modal--normal-mode-map "?" 'isearch-backward-regexp)
+(define-key modal--normal-mode-map "o" 'modal--other-window)
+(define-key modal--normal-mode-map "s" 'isearch-forward-regexp)
+(define-key modal--normal-mode-map "r" 'isearch-backward-regexp)
 (define-key modal--normal-mode-map "k" 'paredit-forward)
 (define-key modal--normal-mode-map "j" 'paredit-backward)
 (define-key modal--normal-mode-map "u" 'universal-argument)
@@ -30,7 +39,43 @@
 (define-key modal--normal-mode-map ">" 'end-of-buffer)
 (define-key modal--normal-mode-map "v" 'scroll-up-command)
 (define-key modal--normal-mode-map "V" 'scroll-down-command)
+(defvar modal--normal-mode-enabled nil)
 
+
+
+(defun modal--other-window ()
+  "wrapper around other-window"
+  (interactive)
+  (other-window 1))
+
+
+
+(defvar modal--global-mode-map nil "")
+(setq modal--global-mode-map (make-sparse-keymap))
+(define-key modal--global-mode-map "o" 'modal--other-window-or-self-insert)
+(defvar modal--global-mode-enabled t)
+
+;; plan
+;; 
+
+(defvar modal--other-window-or-self-insert-acted-as-other-window nil)
+(defun modal--other-window-or-self-insert ()
+  "If the previous command was `other-window` or
+`modal--other-window-or-self-insert`, run `other-window`.
+Otherwise, insert the char as though `self-insert-command`.
+
+The point of this command is to allow a user to flip from
+a window with a buffer in normal mode to another window, and still
+be able to continue moving between windows."
+  (interactive)
+  (if (or (eq last-command 'modal--other-window)
+          (and (eq last-command 'modal--other-window-or-self-insert)
+              modal--other-window-or-self-insert-acted-as-other-window))
+      (progn
+        (setq modal--other-window-or-self-insert-acted-as-other-window t)
+        (other-window 1))
+    (setq modal--other-window-or-self-insert-acted-as-other-window nil)
+    (self-insert-command 1)))
 
 (defun modal--buffer-mode-exclusive-switch (mode-to-switch-on)
   (setq modal--insert-mode-enabled nil)
@@ -47,6 +92,11 @@
   "Switches to normal mode"
   (interactive)
   (modal--buffer-mode-exclusive-switch 'modal--normal-mode-enabled)
+  (modal-emacs-update-mode-line))
+
+(defun modal--movement-mode ()
+  (interactive)
+  (modal--buffer-mode-exclusive-switch 'modal--movement-mode-enabled)
   (modal-emacs-update-mode-line))
 
 (defvar modal--super-mode-enabling-map "Map which lets user get super mode" nil)
@@ -83,12 +133,18 @@
   (setq modal--normal-mode-enabled nil)
   (set mode-to-switch-on t))
 
-(defvar modal--keymap-alist
-  `((modal--normal-mode-enabled . ,modal--normal-mode-map)
-    (modal--insert-mode-enabled . ,modal--insert-mode-map)
-    (modal--super-mode-enabling-enabled . ,modal--super-mode-enabling-map)
-    (modal--super-mode-enabled . ,modal--super-mode-map))
+
+
+(defvar modal--keymap-alist nil
   "Keymaps and toggles that allow us to turn them on and off.")
+(setq modal--keymap-alist
+      `(
+        ;;(modal--global-mode-enabled . ,modal--global-mode-map)
+        (modal--normal-mode-enabled . ,modal--normal-mode-map)
+        (modal--insert-mode-enabled . ,modal--insert-mode-map)
+        (modal--super-mode-enabling-enabled . ,modal--super-mode-enabling-map)
+        (modal--super-mode-enabled . ,modal--super-mode-map)))
+
 
 (define-minor-mode modal-emacs-mode
   "minor mode that enables our semi-simplistic \"modal\" keymap system"
