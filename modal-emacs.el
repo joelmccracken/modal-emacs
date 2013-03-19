@@ -43,6 +43,25 @@
 
 
 
+(defvar modal--move-mode-map nil "keymap for movement mode")
+(setq modal--normal-mode-map (make-sparse-keymap))
+(define-key modal--normal-mode-map "a" 'move-beginning-of-line)
+
+
+
+(defvar modal--mode-stack nil
+  "")
+
+(defun modal--pop-mode-stack ()
+  ""
+
+
+  
+
+  )
+
+
+
 (defun modal--other-window ()
   "wrapper around other-window"
   (interactive)
@@ -80,6 +99,7 @@ be able to continue moving between windows."
 (defun modal--buffer-mode-exclusive-switch (mode-to-switch-on)
   (setq modal--insert-mode-enabled nil)
   (setq modal--normal-mode-enabled nil)
+  (setq modal--movement-mode-enabled nil)
   (set mode-to-switch-on t))
 
 (defun modal--insert-mode ()
@@ -104,7 +124,6 @@ be able to continue moving between windows."
 (define-key modal--super-mode-enabling-map (kbd "C-z") 'modal--super-mode)
 (defvar modal--super-mode-enabling-enabled t
   "When non-nil, allows super-mode activation keybindings.")
-
 
 (defvar modal--super-mode-map "The 'super' map for controlling Emacs accross buffers.")
 (setq modal--super-mode-map (make-sparse-keymap))
@@ -132,7 +151,6 @@ be able to continue moving between windows."
   (setq modal--insert-mode-enabled nil)
   (setq modal--normal-mode-enabled nil)
   (set mode-to-switch-on t))
-
 
 
 (defvar modal--keymap-alist nil
