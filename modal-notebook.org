@@ -1,0 +1,16 @@
+Trying out developer "lab notebook" idea
+
+
+
+* <2013-04-07 Sun>  
+** code cleanup/regrouping
+*** adding tests -- doing pseudo tdd
+*** began integrating eieio as object system
+** added a ton of tests
+*** testing out a new style of writing emacs tests
+**** a macro `modal-test` which handles defining a test in modal-emacs style
+**** tests can be run immediately if a flag is set (thus easy to eval flags)
+**** a single wrapping sexp per test
+* <2013-04-06 Sat> 
+  starting point: 66d7c82b7183d2ac361f8aea1b8a097a63e0b74f
+  
