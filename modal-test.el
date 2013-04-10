@@ -1,20 +1,45 @@
 (require 'ert)
 
 (defvar modal-test-testing-modes nil)
+(defvar modal-test-testing-mode-counter 0)
+(defun modal-test-define-testing-mode (&optional action &rest args)
+  (incf modal-test-testing-mode-counter)
+  (let ((default-opt (member :default args))
+        (mode-name (intern (format "testing%d" modal-test-testing-mode-counter)))
+        the-mode)
+    (setq the-mode
+          (eval  `(modal-define-mode
+                   ,mode-name
+                   :doc "a testing mode"
+                   :map (( "a" (eval '(modal-carry
+                                       (action)
+                                       (lambda () (interactive)
+                                         (funcall action)))
+                                     t)))
+                   :default (me--andand (member :default args) (cadr it)))))
+    (add-to-list 'modal-test-testing-modes mode-name)
+    the-mode))
 
-(defun modal-test-define-testing-mode (&optional action)
-  (modal-define-mode
-   testing
-   :doc "a testing mode"
-   :map (( "a" (eval '(modal-carry
-                       (action)
-                       (lambda () (interactive)
-                         (funcall action)) 
-                       ) t))))
-  
-  (add-to-list 'modal-test-testing-modes modal-testing-mode)
-  modal-testing-mode)
+(defmacro me--andand (&rest args)
+  "andand will string an expression together,
+providing the results of the previous expression to the next expression,
+if the results are non-nil.
 
+it lets you convert this: 
+   (and (member :default args)
+        (cadr (member :default args)))
+
+into this:
+   (andand (member :default args)
+           (cadr it))
+"
+  (let ((last-result (eval (car args)))
+        (args-left (cdr args)))
+    (while (and last-result args-left)
+      (let ((it last-result))
+        (setq last-result (eval (car args-left))))
+      (setq args-left (cdr args-left)))
+    last-result))
 
 (defun modal-remove-testing-modes-empty ()
   )
@@ -77,7 +102,7 @@
     (should (equal '((10)) (funcall mock 'call-history)))))
 
 
-;; defining a mode 
+;; defining a mode  / interface tests 
 (modal-test "defines a method which will activate the mode"
   (modal-test-define-testing-mode)
   (should (functionp 'modal-testing-mode)))
@@ -96,17 +121,12 @@ emulation-mode-map-alists is how we specify which keymap is active."
     (should (member 'modal--keymap-alist emulation-mode-map-alists))))
 
 
-(modal-test "enabling modal mode enables a default mode if available"
-  ;; we're assumiing that since this is the only defined mode, it will
-  ;; be default and thus enabled.
-  ;; this may not be true -- not sure *how* default mode should be chosen
-  (modal-test-define-testing-mode)
-  (modal-test-with-buffer
-   (should modal-testing-mode--enabled)))
-
-
-
-
+(modal-test "enabling modal mode enables the default mode not dependent upon order"
+  (let ((first-test-mode (modal-test-define-testing-mode))
+        (second-test-mode (modal-test-define-testing-mode nil :default t))
+        (third-test-mode (modal-test-define-testing-mode nil :default nil)))
+    (modal-test-with-buffer
+     (should (me--enabled-p second-test-mode)))))
 
 
 ;; feature-level stuff
@@ -118,4 +138,21 @@ emulation-mode-map-alists is how we specify which keymap is active."
      (call-interactively (key-binding (kbd "a")))
      (should (eql (length (funcall mock 'call-history))
                   1)))))
+
+
+
+;; unit tests
+
+(modal-test (concat "modal-emacs-instance chooses its default mode based on "
+                    "modes responding to is-default")
+  (let ((mock (modal-mock))
+        (emacs-instance (modal-emacs-instance "test-instance")))
+    (modal-test-define-testing-mode)
+    ))
+
+
+
+
+
+
 

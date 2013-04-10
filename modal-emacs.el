@@ -20,22 +20,32 @@
          :documentation "The name of the keyboard mode")
    (keymap :initarg :keymap
            :initform (make-sparse-keymap)
-           :documentation "The keyboard mode keymap"))
+           :documentation "The keyboard mode keymap")
+   (is-default :initarg :default
+               :initform nil
+               :documentation "Should this mode be considered a default mode"))
   "A single keyboard mode.")
- 
+
+
 (defmacro modal-define-mode (name &rest args)
   `(let ((strname (symbol-name ',name))
+         (args ',args)
          (mode-map (make-sparse-keymap))
-         the-mode)
+         the-mode should-be-default)
      
      ,@(mapcar #'(lambda (binding)
                    `(define-key mode-map (kbd ,(car binding)) ,(cadr binding)))
                (cadr (member :map args)))
+
+     (setq should-be-default
+           (if (member :default args)
+               (cadr (member :default args))))
      
      (setq the-mode
            (modal-mode strname
                        :name ',name
-                       :keymap mode-map))
+                       :keymap mode-map
+                       :default should-be-default))
      
      (set (intern (concat "modal-" strname "-mode")) the-mode)
      (set (modal-enabled-symbol the-mode) nil)
@@ -45,8 +55,13 @@
              (interactive)
              (modal-activate the-mode)))
 
-     (modal-mode-defined (modal-global-emacs-instance) the-mode)
+     (modal-mode-defined
+      (or
+       (plist-get args :emacs-instance)
+       (modal-global-emacs-instance))
+      the-mode)
      the-mode))
+
 
 (defmethod modal-enabled-symbol ((mode modal-mode))
   (intern (concat "modal-" (symbol-name (oref mode name)) "-mode--enabled")))
@@ -58,6 +73,11 @@
 (defmethod modal-deactivate ((mode modal-mode))
   (set (modal-enabled-symbol mode) nil))
 
+(defmethod me--enabled-p ((mode modal-mode))
+  (eval (modal-enabled-symbol mode)))
+
+(defmethod me--default-p ((mode modal-mode))
+  (oref mode is-default))
 
 (defclass modal-emacs-instance ()
   ((modes :initform '())) 
@@ -69,15 +89,15 @@ a place to hang functions that are relative in a global way.")
 (defmethod modal-mode-defined ((emacs-instance modal-emacs-instance) mode)
   (object-add-to-list emacs-instance 'modes mode)
   (add-to-list 'modal--keymap-alist
-               `(,(modal-enabled-symbol mode) . ,(oref mode keymap)))
-  )
+               `(,(modal-enabled-symbol mode) . ,(oref mode keymap))))
 
-
-
+(defmethod me--default-mode ((emacs modal-emacs-instance))
+  (car (last (oref emacs modes))))
 
 (defmethod modal-activate-default ((emacs modal-emacs-instance))
-  (when )
-  (modal-activate-mode emacs (car (oref emacs modes))))
+  (modal-activate-mode emacs
+                       (me--default-mode emacs)))
+
 
 (defmethod modal-activate-mode ((emacs modal-emacs-instance) mode)
   (dolist (x (oref emacs modes))
@@ -89,6 +109,7 @@ a place to hang functions that are relative in a global way.")
   "Keymaps and toggles that allow us to turn modes on and off.
 Referenced from 
 ")
+
 
 
 
@@ -109,7 +130,6 @@ an assumed thorugh `modal-global-emacs-instance'")
             (let ((instance (modal-emacs-instance "Emacs Instance")))
               (modal-init instance)
               instance))))
-
 
 (define-minor-mode modal-emacs-mode
   "minor mode that enables our semi-simplistic \"modal\" keymap system"
@@ -137,11 +157,10 @@ an assumed thorugh `modal-global-emacs-instance'")
         (mapconcat
          'identity
          (delete nil (list
-                      (when modal--normal-mode-enabled "N")
-                      (when modal--insert-mode-enabled "I")))
+                      (when modal-normal-mode--enabled "N")
+                      (when modal-insert-mode--enabled "I")))
          ","))
   (force-mode-line-update))
-
 
 ;; junk for development
 

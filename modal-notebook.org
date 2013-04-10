@@ -1,8 +1,25 @@
 Trying out developer "lab notebook" idea
-
-
-
-* <2013-04-07 Sun>  
+* list of todos
+** TODO fix `me--andand` to produce sexps bc of byte complication
+   <JoelMcCracken> is there a compelling reason to have a macro produce a sexp
+   instead of evaling said sexp itself?
+   <SamB> JoelMcCracken: byte compilation                                  [01:50]
+   <JoelMcCracken> oh
+   <JoelMcCracken> compelling
+* <2013-04-09 Tue>
+** implemented me--andand macro
+*** cool idea, but really not useful -- plist-get does what I was trying to do
+**** keeping it in project anyway.
+** changing the function to be "me--" for private modal emacs methods, etc
+*** #emacs sanity check said this probably this wouldnt conflict with any other packages
+** note about `modal--other-window-or-self-insert`
+*** have been worried about accessing keymap to do "original" command
+*** having thought of/tried it, this should work:
+    (let ((emulation-mode-map-alists nil))
+      (key-binding (this-command-keys)))
+    
+    this should give us the command that we want to "defer" to
+* <2013-04-07 Sun>
 ** code cleanup/regrouping
 *** adding tests -- doing pseudo tdd
 *** began integrating eieio as object system
