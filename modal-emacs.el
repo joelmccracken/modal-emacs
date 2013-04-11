@@ -54,7 +54,6 @@
            (lambda ()
              (interactive)
              (modal-activate the-mode)))
-
      (modal-mode-defined
       (or
        (plist-get args :emacs-instance)
@@ -92,11 +91,19 @@ a place to hang functions that are relative in a global way.")
                `(,(modal-enabled-symbol mode) . ,(oref mode keymap))))
 
 (defmethod me--default-mode ((emacs modal-emacs-instance))
-  (car (last (oref emacs modes))))
+  (let ((modes (oref emacs modes)))
+    (or (car (delete
+              nil
+              (mapcar (lambda (it)
+                        (and (me--default-p it) it))
+                      modes)))
+        (car (last modes)))))
 
 (defmethod modal-activate-default ((emacs modal-emacs-instance))
-  (modal-activate-mode emacs
-                       (me--default-mode emacs)))
+  (let ((default (me--default-mode emacs)))
+    (when default
+      (modal-activate-mode emacs
+                           default))))
 
 
 (defmethod modal-activate-mode ((emacs modal-emacs-instance) mode)
@@ -302,7 +309,7 @@ be able to continue moving between windows."
   (set mode-to-switch-on t))
 
 (defmacro modal-carry (things-to-carry  &rest body)
-  `(let (,@(mapcar (lambda (item ) (list item item)  )
+  `(let (,@(mapcar (lambda (item) (list item item))
                     things-to-carry))
      ,@body))
 

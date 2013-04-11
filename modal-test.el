@@ -6,6 +6,8 @@
   (incf modal-test-testing-mode-counter)
   (let ((default-opt (member :default args))
         (mode-name (intern (format "testing%d" modal-test-testing-mode-counter)))
+        (default (plist-get args :default))
+        (emacs-instance (plist-get args :emacs-instance))
         the-mode)
     (setq the-mode
           (eval  `(modal-define-mode
@@ -16,7 +18,9 @@
                                        (lambda () (interactive)
                                          (funcall action)))
                                      t)))
-                   :default (me--andand (member :default args) (cadr it)))))
+                   :default ,default
+                   :emacs-instance ,emacs-instance)))
+
     (add-to-list 'modal-test-testing-modes mode-name)
     the-mode))
 
@@ -25,7 +29,7 @@
 providing the results of the previous expression to the next expression,
 if the results are non-nil.
 
-it lets you convert this: 
+it lets you convert this:
    (and (member :default args)
         (cadr (member :default args)))
 
@@ -55,13 +59,15 @@ into this:
 
 
 (defvar modal-test-run-on-eval nil "should evaling a deftest run it immediately")
+(setq modal-test-run-on-eval nil)
 (defun modal-test--toggle-run-on-eval ()
   (interactive)
   (setq modal-test-run-on-eval (not modal-test-run-on-eval)))
 
 (defmacro modal-test (docstring &rest body)
   (declare (indent defun))
-  (let ((test-name (modal--testing-symbol-from-string docstring)))
+  (let* ((docstring (eval docstring))
+         (test-name (modal--testing-symbol-from-string docstring)))
     `(let (the-test
            modal-after-test-hook)
        (setq the-test
@@ -88,7 +94,7 @@ into this:
   (interactive)
   (ert-run-tests-interactively '(tag modal)))
 
-(defun modal-mock (&optional call-through)
+(defun me--mock (&optional call-through)
   (eval '(let ((calls nil))
            (lambda (&rest args)
              (if (equal args '(call-history))
@@ -97,12 +103,12 @@ into this:
         t))
 
 (modal-test "test support: modal mock has a recallable history"
-  (let ((mock (modal-mock)))
+  (let ((mock (me--mock)))
     (funcall mock 10)
     (should (equal '((10)) (funcall mock 'call-history)))))
 
 
-;; defining a mode  / interface tests 
+;; defining a mode  / interface tests
 (modal-test "defines a method which will activate the mode"
   (modal-test-define-testing-mode)
   (should (functionp 'modal-testing-mode)))
@@ -132,7 +138,7 @@ emulation-mode-map-alists is how we specify which keymap is active."
 ;; feature-level stuff
 
 (modal-test "feature: enabling modal as minor mode correctly initializes the mode. "
-  (let ((mock (modal-mock)))
+  (let ((mock (me--mock)))
     (modal-test-define-testing-mode mock)
     (modal-test-with-buffer
      (call-interactively (key-binding (kbd "a")))
@@ -140,19 +146,29 @@ emulation-mode-map-alists is how we specify which keymap is active."
                   1)))))
 
 
+;;(defclass modal-mock-emacs-instance ())
+;;(defmethod )
+
+
 
 ;; unit tests
-
-(modal-test (concat "modal-emacs-instance chooses its default mode based on "
+(modal-test (concat "modal-emacs-instance me--default-mode chooses its default mode based on "
                     "modes responding to is-default")
-  (let ((mock (modal-mock))
-        (emacs-instance (modal-emacs-instance "test-instance")))
-    (modal-test-define-testing-mode)
-    ))
+  (let* ((mock (me--mock))
+         (inst (modal-emacs-instance "test-instance"))
+         (m1   (modal-test-define-testing-mode nil :emacs-instance inst))
+         (m2   (modal-test-define-testing-mode nil :emacs-instance inst :default t))
+         (m3   (modal-test-define-testing-mode nil :emacs-instance inst)))
+    (should (equal (me--default-mode inst)
+                   m2))))
 
-
-
-
-
-
+(modal-test (concat "modal-emacs-instance me--default-mode chooses the first instance if "
+                    "there are no selected defaults")
+  (let* ((mock (me--mock))
+         (inst (modal-emacs-instance "test-instance"))
+         (m1   (modal-test-define-testing-mode nil :emacs-instance inst))
+         (m2   (modal-test-define-testing-mode nil :emacs-instance inst))
+         (m3   (modal-test-define-testing-mode nil :emacs-instance inst)))
+    (should (equal (me--default-mode inst)
+                   m1))))
 
