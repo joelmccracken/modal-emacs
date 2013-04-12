@@ -7,7 +7,6 @@
 ;;; global activation and control logic
 
 
-
 (defun modal-emacs-on () (interactive) (modal-emacs-mode 1))
 (defun modal-emacs-off () (interactive) (modal-emacs-mode -1))
 
@@ -61,7 +60,6 @@
       the-mode)
      the-mode))
 
-
 (defmethod modal-enabled-symbol ((mode modal-mode))
   (intern (concat "modal-" (symbol-name (oref mode name)) "-mode--enabled")))
 
@@ -114,11 +112,7 @@ a place to hang functions that are relative in a global way.")
 
 (defvar modal--keymap-alist nil
   "Keymaps and toggles that allow us to turn modes on and off.
-Referenced from 
-")
-
-
-
+Referenced from")
 
 
 (defmethod modal-init ((inst modal-emacs-instance))
@@ -144,14 +138,15 @@ an assumed thorugh `modal-global-emacs-instance'")
   :lighter (:eval (format " Modal[%s]" modal--current-indicator))
 
   (dolist (x '(modal--current-indicator
-               modal--normal-mode-enabled
-               modal--insert-mode-enabled))
+               modal-normal-mode--enabled
+               modal-insert-mode--enabled))
     (make-local-variable x))
-  
+
     (if (not modal-emacs-mode)
         (setq emulation-mode-map-alists (delq 'modal--keymap-alist emulation-mode-map-alists))
       (add-to-ordered-list 'emulation-mode-map-alists 'modal--keymap-alist 400)
-      (modal-activate-default (modal-global-emacs-instance))))
+      (modal-activate-default (modal-global-emacs-instance))
+      (modal-emacs-update-mode-line)))
 
 (define-globalized-minor-mode modal-emacs-globalized-mode modal-emacs-mode
   modal-emacs-on)
@@ -229,8 +224,7 @@ Of course, we might be wrong, sine it uses a regular expression and is kinda fuz
 (defun modal--normal-mode ()
   "Switches to normal mode"
   (interactive)
-
-  (modal--buffer-mode-exclusive-switch 'modal--normal-mode-enabled)
+  (modal--buffer-mode-exclusive-switch 'modal-normal-mode--enabled)
   (modal-emacs-update-mode-line))
 
 ;;; insert mode 
@@ -238,12 +232,13 @@ Of course, we might be wrong, sine it uses a regular expression and is kinda fuz
  insert
  :doc "Map for typing characters. Really only contains a helper to switch to normal mode"
  :map (("M-ESC" 'modal--normal-mode)
-       ( "o" 'modal--other-window-or-self-insert)))
+       ( "o" 'modal--other-window-or-self-insert))
+ :default t)
 
 (defun modal--insert-mode ()
   "Switches to insert mode"
   (interactive)
-  (modal--buffer-mode-exclusive-switch 'modal--insert-mode-enabled)
+  (modal--buffer-mode-exclusive-switch 'modal-insert-mode--enabled)
   (modal-emacs-update-mode-line))
 
 ;;; global mode
@@ -303,9 +298,9 @@ be able to continue moving between windows."
     (self-insert-command 1)))
 
 (defun modal--buffer-mode-exclusive-switch (mode-to-switch-on)
-  (setq modal--insert-mode-enabled nil)
-  (setq modal--normal-mode-enabled nil)
-  (setq modal--movement-mode-enabled nil)
+  (setq modal-insert-mode--enabled nil)
+  (setq modal-normal-mode--enabled nil)
+  (setq modal-movement-mode--enabled nil)
   (set mode-to-switch-on t))
 
 (defmacro modal-carry (things-to-carry  &rest body)
