@@ -1,4 +1,3 @@
-Trying out developer "lab notebook" idea
 * list of todos
 ** TODO fix `me--andand` to produce sexps bc of byte complication
    <JoelMcCracken> is there a compelling reason to have a macro produce a sexp
@@ -7,6 +6,12 @@ Trying out developer "lab notebook" idea
    <JoelMcCracken> oh
    <JoelMcCracken> compelling
 ** DONE fix broken default mode selection
+** TODO renaming insert mode to conventional
+** TODO rename normal to command
+** TODO add a `?` binding to describe the current mode
+** TODO decide on other visual indicators for 
+* <2013-04-13 Sat>--<2013-04-14 Sun>
+** worked on readme, notebook
 * <2013-04-10 Wed>
 ** user testing check
 *** default mode is wrong
