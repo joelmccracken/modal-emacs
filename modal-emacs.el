@@ -148,12 +148,14 @@ an assumed thorugh `modal-global-emacs-instance'")
       (modal-activate-default (modal-global-emacs-instance))
       (modal-emacs-update-mode-line)))
 
-(define-globalized-minor-mode modal-emacs-globalized-mode modal-emacs-mode
-  modal-emacs-on)
+
+
+;; while this exists (and is possible), i woudln't recommend it
+;; for now its seems better to activaate modal mode on a per-buffer basis
+(define-globalized-minor-mode modal-emacs-globalized-mode modal-emacs-mode modal-emacs-on)
 
 
 (defvar modal--current-indicator nil)
-
 (defun modal-emacs-update-mode-line ()
   (setq modal--current-indicator
         (mapconcat
@@ -227,11 +229,16 @@ Of course, we might be wrong, sine it uses a regular expression and is kinda fuz
   (modal--buffer-mode-exclusive-switch 'modal-normal-mode--enabled)
   (modal-emacs-update-mode-line))
 
+
+
+
+
 ;;; insert mode 
 (modal-define-mode
  insert
  :doc "Map for typing characters. Really only contains a helper to switch to normal mode"
  :map (("M-ESC" 'modal--normal-mode)
+       ("M-SPC" 'modal--normal-mode)
        ( "o" 'modal--other-window-or-self-insert))
  :default t)
 
