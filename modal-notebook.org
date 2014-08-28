@@ -7,9 +7,10 @@
    <JoelMcCracken> compelling
 ** DONE fix broken default mode selection
 ** TODO renaming insert mode to conventional
-** TODO rename normal to command
+** TODO rename normal to command (because normal-mode is something in emacs)
 ** TODO add a `?` binding to describe the current mode
-** TODO decide on other visual indicators for 
+** TODO decide on other visual indicators for current mode
+** TODO integrate discover.el
 * <2013-04-13 Sat>--<2013-04-14 Sun>
 ** worked on readme, notebook
 * <2013-04-10 Wed>
