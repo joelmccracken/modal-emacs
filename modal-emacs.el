@@ -1,15 +1,23 @@
+;; -*- lexical-binding: t -*-
 ;; Release into the public domain.
-;; TODO add gpl header
 
+;; TODOs
+;; add gpl header
+;; remove eieio in favor of alists
+;; compile mode
+;; make this as a git subdir in emacs
+;; use lexical scopes
+;; package with melpa (or whatever)
+;; use 'names' pkg to handle namespacing
 (require 'eieio)
 
-
 ;;; global activation and control logic
-
 
 (defun modal-emacs-on () (interactive) (modal-emacs-mode 1))
 (defun modal-emacs-off () (interactive) (modal-emacs-mode -1))
 
+(defvar modal--enable-development-extensions nil
+  "enable development extensions. Useful if you are hacking on modal-emacs.")
 
 ;; modal system setup / support
 (defclass modal-mode ()
@@ -31,7 +39,7 @@
          (args ',args)
          (mode-map (make-sparse-keymap))
          the-mode should-be-default)
-     
+
      ,@(mapcar #'(lambda (binding)
                    `(define-key mode-map (kbd ,(car binding)) ,(cadr binding)))
                (cadr (member :map args)))
@@ -39,16 +47,16 @@
      (setq should-be-default
            (if (member :default args)
                (cadr (member :default args))))
-     
+
      (setq the-mode
            (modal-mode strname
                        :name ',name
                        :keymap mode-map
                        :default should-be-default))
-     
+
      (set (intern (concat "modal-" strname "-mode")) the-mode)
      (set (modal-enabled-symbol the-mode) nil)
-     
+
      (fset (intern (concat "modal-" strname "-mode"))
            (lambda ()
              (interactive)
@@ -76,8 +84,10 @@
 (defmethod me--default-p ((mode modal-mode))
   (oref mode is-default))
 
+
+
 (defclass modal-emacs-instance ()
-  ((modes :initform '())) 
+  ((modes :initform '()))
   "The emacs instance to work with.
 Serves as a wrapper around emacs interfaces and provides
 a place to hang functions that are relative in a global way.")
@@ -133,7 +143,7 @@ an assumed thorugh `modal-global-emacs-instance'")
               instance))))
 
 (define-minor-mode modal-emacs-mode
-  "minor mode that enables our semi-simplistic \"modal\" keymap system"
+  "minor mode that enables the modal keymap system"
   :group 'modal-emacs
   :lighter (:eval (format " Modal[%s]" modal--current-indicator))
 
@@ -148,12 +158,10 @@ an assumed thorugh `modal-global-emacs-instance'")
       (modal-activate-default (modal-global-emacs-instance))
       (modal-emacs-update-mode-line)))
 
-
-
-;; while this exists (and is possible), i woudln't recommend it
-;; for now its seems better to activaate modal mode on a per-buffer basis
-(define-globalized-minor-mode modal-emacs-globalized-mode modal-emacs-mode modal-emacs-on)
-
+;; while this exists (and is possible), i wouldn't recommend it
+;; for now its seems better to activate modal mode on a per-buffer basis
+(define-globalized-minor-mode modal-emacs-globalized-mode
+  modal-emacs-mode modal-emacs-on)
 
 (defvar modal--current-indicator nil)
 (defun modal-emacs-update-mode-line ()
@@ -166,36 +174,34 @@ an assumed thorugh `modal-global-emacs-instance'")
          ","))
   (force-mode-line-update))
 
-;; junk for development
+(when modal--enable-development-extensions
 
-(defun modal--reset-emacs-instance--! ()
-  (interactive)
-  (modal--reset-minor-mode-alist)
-  (modal--remove-symbols--!))
+  (defun modal--reset-emacs-instance--! ()
+    (interactive)
+    (modal--reset-minor-mode-alist)
+    (modal--remove-symbols--!))
 
-(defun modal--reset-minor-mode-alist ()
-  (setq minor-mode-alist
-         (-remove (lambda (elt)
-                    (string= (symbol-name (car elt)) "modal-emacs-mode"))
-                  minor-mode-alist)))
+  (defun modal--reset-minor-mode-alist ()
+    (setq minor-mode-alist
+          (-remove (lambda (elt)
+                     (string= (symbol-name (car elt)) "modal-emacs-mode"))
+                   minor-mode-alist)))
 
+  (defun modal--remove-symbols--! ()
+    (interactive)
+    (dolist (it (modal--symbol-search--!))
+      (unintern it)))
 
-(defun modal--remove-symbols--! ()
-  (interactive)
-  (dolist (it (modal--symbol-search--!))
-    (unintern it)))
-
-
-(defun modal--symbol-search--! ()
-  "return a list of the symbols that we believe belong to modal-emacs.
-Of course, we might be wrong, sine it uses a regular expression and is kinda fuzzy"
-  (let (matching-symbols)
-    (mapatoms
-     (lambda (it)
-       (when (string-match  "\\(^modal-\\|^modal--\\)" (symbol-name it))
-         (push it matching-symbols)
-         )))
-    matching-symbols))
+  (defun modal--symbol-search--! ()
+    "return a list of the symbols that we believe belong to modal-emacs.
+Of course, we might be wrong, since it uses a regular expression and is kinda fuzzy"
+    (let (matching-symbols)
+      (mapatoms
+       (lambda (it)
+         (when (string-match  "\\(^modal-\\|^modal--\\)" (symbol-name it))
+           (push it matching-symbols)
+           )))
+      matching-symbols)))
 
 
 
@@ -230,31 +236,22 @@ Of course, we might be wrong, sine it uses a regular expression and is kinda fuz
   (modal-emacs-update-mode-line))
 
 
-
-
-
-;;; insert mode 
+;;; insert mode
 (modal-define-mode
  insert
  :doc "Map for typing characters. Really only contains a helper to switch to normal mode"
  :map (("M-ESC" 'modal--normal-mode)
-       ("M-SPC" 'modal--normal-mode)
-       ( "o" 'modal--other-window-or-self-insert))
+       ("M-SPC" 'modal--normal-mode))
  :default t)
 
-(defun modal--insert-mode ()
-  "Switches to insert mode"
-  (interactive)
-  (modal--buffer-mode-exclusive-switch 'modal-insert-mode--enabled)
-  (modal-emacs-update-mode-line))
 
-;;; global mode
-(modal-define-mode
- global
- :doc "Global mode that brings support to other buffers to make the feel more natural"
- :map (("o" 'modal--other-window-or-self-insert)))
+(defun modal--mode-activator (mode)
+  (lambda ()
+    (interactive)
+    (modal--buffer-mode-exclusive-switch mode)
+    (modal-emacs-update-mode-line)))
 
-
+(fset 'modal--insert-mode (modal--mode-activator 'modal-insert-mode--enabled))
 
 ;; movement mode
 (defun modal--movement-mode ()
@@ -262,57 +259,43 @@ Of course, we might be wrong, sine it uses a regular expression and is kinda fuz
   (modal--buffer-mode-exclusive-switch 'modal--movement-mode-enabled)
   (modal-emacs-update-mode-line))
 
-
 ;; mode "stack" support
-
 (defvar modal--mode-stack nil
   "list of modes; when current mode is popped, then switch to top")
 
+(defun modal--self-insert-advice (orig &rest args)
+  "advice for the self insert command. "
+  (cond ((and (string= "o"
+                       (this-command-keys))
+              (equal last-command 'modal--other-window))
+         (call-interactively 'modal--other-window))
+        ((and modal-emacs-mode
+              modal-normal-mode--enabled)
+         (user-error "Pressed %s, which would run `self-insert-command`, which is currently disabled in this mode." (this-command-keys)))
+        (t (apply orig args))))
 
-(defun modal--pop-mode-stack ()
-  "return to last mode on stack"
-  (push )
-  )
+(defun modal--install-self-insert-overriding ()
+  (advice-add 'self-insert-command
+              :around
+              #'modal--self-insert-advice))
 
-
-
+(modal--install-self-insert-overriding)
 
 ;; misc / library functions
-
-(defun modal--other-window ()
-  "wrapper around other-window"
-  (interactive)
-  (other-window 1))
-
-
-(defvar modal--other-window-or-self-insert-acted-as-other-window nil)
-(defun modal--other-window-or-self-insert ()
-  "If the previous command was `other-window` or
-`modal--other-window-or-self-insert`, run `other-window`.
-Otherwise, insert the char as though `self-insert-command`.
-
-The point of this command is to allow a user to flip from
-a window with a buffer in normal mode to another window, and still
-be able to continue moving between windows."
-  (interactive)
-  (if (or (eq last-command 'modal--other-window)
-          (and (eq last-command 'modal--other-window-or-self-insert)
-              modal--other-window-or-self-insert-acted-as-other-window))
-      (progn
-        (setq modal--other-window-or-self-insert-acted-as-other-window t)
-        (other-window 1))
-    (setq modal--other-window-or-self-insert-acted-as-other-window nil)
-    (self-insert-command 1)))
-
 (defun modal--buffer-mode-exclusive-switch (mode-to-switch-on)
   (setq modal-insert-mode--enabled nil)
   (setq modal-normal-mode--enabled nil)
   (setq modal-movement-mode--enabled nil)
   (set mode-to-switch-on t))
 
-(defmacro modal-carry (things-to-carry  &rest body)
-  `(let (,@(mapcar (lambda (item) (list item item))
-                    things-to-carry))
-     ,@body))
+
+(defun modal--other-window ()
+  "Wrapper around other-window.
+This exists for checking that this specifically was the last call to other-window,
+which is something that
+"
+  (interactive)
+  (other-window 1))
+
 
 (provide 'modal-emacs)
