@@ -14,9 +14,8 @@ faster to type).
 
 # Alpha Warning #
 
-Modal Emacs is still in early development. I (Joel) use it for work
-every day, but you should exect it to rapidly change -- and dont be
-sure that anything will stay the same, at least until further notice.
+Modal Emacs is still in early development. You should expect lots of
+change as the project evolves.
 
 If you have any feedback, suggestions, or would like to help, please
 contact me via issues!
@@ -26,7 +25,7 @@ contact me via issues!
 There are a bunch of frameworks that emulate Vim keybindings in
 Emacs. This is not one of them.
 
-Vim is a great editor. I used Vim for years, and I really liked it. 
+Vim is a great editor. I used Vim for years, and I really like(d) it. 
 However, Emacs and Vim are very different
 beasts, and the way that they operate is also very different. Their
 philosophies are different, and their intellectual lineage is
