@@ -24,27 +24,6 @@
     (add-to-list 'modal-test-testing-modes mode-name)
     the-mode))
 
-(defmacro me--andand (&rest args)
-  "andand will string an expression together,
-providing the results of the previous expression to the next expression,
-if the results are non-nil.
-
-it lets you convert this:
-   (and (member :default args)
-        (cadr (member :default args)))
-
-into this:
-   (andand (member :default args)
-           (cadr it))
-"
-  (let ((last-result (eval (car args)))
-        (args-left (cdr args)))
-    (while (and last-result args-left)
-      (let ((it last-result))
-        (setq last-result (eval (car args-left))))
-      (setq args-left (cdr args-left)))
-    last-result))
-
 (defun modal-remove-testing-modes-empty ()
   )
 
