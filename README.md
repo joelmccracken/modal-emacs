@@ -1,3 +1,7 @@
+# 11/2015 Update
+
+I've given spacemacs a try, and have decided to not pursue this project. If you want to use it for some reason, let me know. I will license it MIT.
+
 
 # Modal Emacs #
 
